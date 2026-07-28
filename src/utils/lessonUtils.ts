@@ -1,69 +1,61 @@
-import type { Lesson } from "../data/mockData"
+import type { Lesson } from "../types"
 
-// 1. Matematik derslerini getirir.
-export const getMathLessons = (lessons: Lesson[]) => {
+// Belirli bir derse ait dersleri getirir.
+export const getLessonsBySubject = (
+  lessons: Lesson[],
+  subject: Lesson["subject"]
+): Lesson[] => {
   return lessons.filter(
-    (lesson) => lesson.subject === "Matematik"
+    (lesson) => lesson.subject === subject
   )
 }
 
-// 2. Tamamlanmış dersleri getirir.
-export const getCompletedLessons = (lessons: Lesson[]) => {
-  return lessons.filter(
-    (lesson) => lesson.completed
-  )
-}
-
-// 3. Yalnızca ders başlıklarını getirir.
-export const getLessonTitles = (lessons: Lesson[]) => {
-  return lessons.map(
-    (lesson) => lesson.title
-  )
-}
-
-// 4. Verilen ID'ye sahip dersi bulur.
+// Verilen ID'ye sahip dersi bulur.
 export const findLessonById = (
   lessons: Lesson[],
-  lessonId: number
-) => {
+  lessonId: string
+): Lesson | undefined => {
   return lessons.find(
     (lesson) => lesson.id === lessonId
   )
 }
 
-// 5. Yeni bir ders ekler.
+// Belirli bir sınıfa ait dersleri getirir.
+export const getLessonsByGrade = (
+  lessons: Lesson[],
+  grade: number
+): Lesson[] => {
+  return lessons.filter(
+    (lesson) => lesson.grade === grade
+  )
+}
+
+// Belirli bir öğretmenin derslerini getirir.
+export const getLessonsByTeacher = (
+  lessons: Lesson[],
+  teacherId: string
+): Lesson[] => {
+  return lessons.filter(
+    (lesson) => lesson.teacherId === teacherId
+  )
+}
+
+// Yeni ders eklenmiş yeni bir dizi oluşturur.
 export const addLesson = (
   lessons: Lesson[],
   newLesson: Lesson
-) => {
+): Lesson[] => {
   return [
     ...lessons,
     newLesson,
   ]
 }
 
-// 6. Dersin tamamlanma durumunu tersine çevirir.
-export const toggleLessonCompleted = (
-  lessons: Lesson[],
-  lessonId: number
-) => {
-  return lessons.map((lesson) => {
-    if (lesson.id === lessonId) {
-      return {
-        ...lesson,
-        completed: !lesson.completed,
-      }
-    }
-
-    return lesson
-  })
-}
-
-// 7. Verilen ID'ye sahip dersi siler.
+// Verilen ID'ye sahip dersi siler.
 export const deleteLesson = (
   lessons: Lesson[],
-  lessonId: number
-) => {
+  lessonId: string
+): Lesson[] => {
   return lessons.filter(
     (lesson) => lesson.id !== lessonId
   )

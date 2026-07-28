@@ -1,45 +1,54 @@
 import "./App.css"
 
-import { lessons } from "./data/mockData"
+import {
+  lessons,
+  questions,
+  users,
+} from "./data/mockData"
 
 import {
   addLesson,
   deleteLesson,
   findLessonById,
-  getCompletedLessons,
-  getLessonTitles,
-  getMathLessons,
-  toggleLessonCompleted,
+  getLessonsByGrade,
+  getLessonsBySubject,
+  getLessonsByTeacher,
 } from "./utils/lessonUtils"
 
-const newLesson = {
-  id: 3,
-  title: "Simple Present Tense",
-  subject: "İngilizce",
+import type { Lesson } from "./types"
+
+const newLesson: Lesson = {
+  id: "lesson-4",
+  title: "Ondalık Sayılar",
+  subject: "math",
   grade: 6,
-  completed: false,
+  description: "Ondalık sayıların temel özellikleri.",
+  teacherId: "user-1",
 }
 
-console.log("Bütün dersler:", lessons)
+
+console.log("Kullanıcılar:", users)
+console.log("Dersler:", lessons)
+console.log("Sorular:", questions)
 
 console.log(
   "Matematik dersleri:",
-  getMathLessons(lessons)
+  getLessonsBySubject(lessons, "math")
 )
 
 console.log(
-  "Tamamlanmış dersler:",
-  getCompletedLessons(lessons)
+  "6. sınıf dersleri:",
+  getLessonsByGrade(lessons, 6)
 )
 
 console.log(
-  "Ders başlıkları:",
-  getLessonTitles(lessons)
+  "ID'si lesson-2 olan ders:",
+  findLessonById(lessons, "lesson-2")
 )
 
 console.log(
-  "ID'si 2 olan ders:",
-  findLessonById(lessons, 2)
+  "Öğretmenin dersleri:",
+  getLessonsByTeacher(lessons, "user-1")
 )
 
 console.log(
@@ -48,25 +57,17 @@ console.log(
 )
 
 console.log(
-  "Tamamlanma durumu değişmiş liste:",
-  toggleLessonCompleted(lessons, 1)
-)
-
-console.log(
-  "ID'si 2 olan ders silindikten sonra:",
-  deleteLesson(lessons, 2)
+  "Ders silinmiş liste:",
+  deleteLesson(lessons, "lesson-2")
 )
 
 function App() {
   return (
     <main>
-      <h1>2. Gün JavaScript Çalışması</h1>
-
-      <p>
-        Fonksiyonların sonuçlarını görmek için tarayıcı
-        konsolunu aç.
-      </p>
+      <h1>3. Gün TypeScript Çalışması</h1>
+      <p>Sonuçları görmek için Console bölümünü aç.</p>
     </main>
   )
 }
+
 export default App
