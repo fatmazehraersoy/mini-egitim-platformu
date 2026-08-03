@@ -18,6 +18,8 @@ export interface Lesson {
   subject: "math" | "science" | "english"
   grade: number
   description?: string
+  estimatedDuration: number
+  isPublished: boolean
   teacherId: string
 }
 
