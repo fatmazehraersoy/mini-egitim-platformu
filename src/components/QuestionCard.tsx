@@ -4,6 +4,12 @@ type QuestionCardProps = {
   status: "pending" | "answered" | "escalated"
 }
 
+const statusLabels = {
+  pending: "Beklemede",
+  answered: "Cevaplandı",
+  escalated: "Öğretmene Yönlendirildi",
+}
+
 function QuestionCard({
   studentName,
   content,
@@ -13,9 +19,11 @@ function QuestionCard({
     <article>
       <h3>Öğrenci: {studentName}</h3>
       <p>Soru: {content}</p>
-      <p>Durum: {status}</p>
+      <p>Durum: {statusLabels[status]}</p>
 
-      <button>Cevapla</button>
+      <button type="button">
+  Soruyu Cevapla
+</button>
     </article>
   )
 }
