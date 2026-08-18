@@ -22,3 +22,15 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+# Environment files
+.env
+server/.env
+
+# Tool / agent generated files
+server/.agents/
+server/.claude/
+server/.windsurf/
+server/skills-lock.json
+
+# Prisma generated client
+server/src/generated/prisma/
