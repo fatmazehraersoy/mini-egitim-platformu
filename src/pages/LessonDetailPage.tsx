@@ -8,10 +8,12 @@ import {
   useParams,
 } from "react-router-dom"
 
-import type { Lesson } from "../types"
-import { getLessonById } from "../services/lessonService"
 import { subjectLabels } from "../constants/lessonLabels"
 
+import {
+  getLessonById,
+  type LessonResponse,
+} from "../services/api"
 
 function LessonDetailPage() {
   const { lessonId } = useParams<{
@@ -19,7 +21,7 @@ function LessonDetailPage() {
   }>()
 
   const [lesson, setLesson] =
-    useState<Lesson | null>(null)
+    useState<LessonResponse | null>(null)
 
   const [isLoading, setIsLoading] =
     useState(true)
@@ -34,18 +36,22 @@ function LessonDetailPage() {
         setError(null)
 
         if (!lessonId) {
-          setError("Ders ID bilgisi bulunamadı.")
+          setError(
+            "Ders ID bilgisi bulunamadı."
+          )
           return
         }
 
         const foundLesson =
           await getLessonById(lessonId)
 
-        setLesson(foundLesson ?? null)
-      } catch {
-  setError(
-    "Ders bilgileri şu anda yüklenemedi. Lütfen bağlantınızı kontrol edip tekrar deneyin."
-  )
+        setLesson(foundLesson)
+      } catch (error) {
+        setError(
+          error instanceof Error
+            ? error.message
+            : "Ders bilgileri yüklenemedi."
+        )
       } finally {
         setIsLoading(false)
       }
@@ -57,73 +63,58 @@ function LessonDetailPage() {
   if (isLoading) {
     return (
       <main>
-        <p>Yükleniyor…</p>
+        <p>Ders yükleniyor...</p>
       </main>
     )
   }
 
   if (error) {
-  return (
-    <main className="error-state">
-      <h1>Ders yüklenemedi</h1>
+    return (
+      <main className="error-state">
+        <h1>Ders yüklenemedi</h1>
 
-      <p>{error}</p>
+        <p>{error}</p>
 
-      <button
-        type="button"
-        onClick={() => window.location.reload()}
-      >
-        Tekrar Dene
-      </button>
+        <Link to="/teacher">
+          Öğretmen paneline dön
+        </Link>
+      </main>
+    )
+  }
 
-      <Link to="/teacher">
-        Öğretmen paneline dön
-      </Link>
-    </main>
-  )
-}
+  if (!lesson) {
+    return (
+      <main className="empty-state">
+        <h1>Ders bulunamadı</h1>
 
-if (!lesson) {
-  return (
-    <main className="empty-state">
-      <h1>Ders bulunamadı</h1>
+        <Link to="/teacher">
+          Ders listesine dön
+        </Link>
+      </main>
+    )
+  }
 
-      <p>
-        Aradığınız ders silinmiş veya bağlantı yanlış olabilir.
-      </p>
-
-      <Link to="/teacher">
-        Ders listesine dön
-      </Link>
-    </main>
-  )
-}
   return (
     <main>
       <h1>{lesson.title}</h1>
 
       <p>
+        Kurs: {lesson.course.title}
+      </p>
+
+      <p>
         Ders alanı:{" "}
-        {subjectLabels[lesson.subject]}
-      </p>
-
-      <p>Sınıf: {lesson.grade}</p>
-
-      <p>
-        {lesson.description ??
-          "Bu ders için açıklama eklenmemiş."}
+        {subjectLabels[
+          lesson.course.subject
+        ]}
       </p>
 
       <p>
-        Tahmini süre:{" "}
-        {lesson.estimatedDuration} dakika
+        Sınıf: {lesson.course.grade}
       </p>
 
       <p>
-        Durum:{" "}
-        {lesson.isPublished
-          ? "Yayımlandı"
-          : "Taslak"}
+        Ders içeriği: {lesson.content}
       </p>
 
       <Link to="/teacher">

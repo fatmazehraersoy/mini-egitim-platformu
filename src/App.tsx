@@ -8,6 +8,9 @@ import StudentDashboard from "./pages/StudentDashboard"
 import LessonDetailPage from "./pages/LessonDetailPage"
 import AskQuestionPage from "./pages/AskQuestionPage"
 import NotFoundPage from "./pages/NotFoundPage"
+import DemoLoginPage from "./pages/DemoLoginPage"
+import ProtectedRoute from "./components/ProtectedRoute"
+import TeacherQuestionsPage from "./pages/TeacherQuestionsPage"
 
 import "./App.css"
 
@@ -20,24 +23,40 @@ function App() {
       />
 
       <Route
-        path="/teacher"
-        element={<TeacherDashboard />}
-      />
+  path="/teacher"
+  element={
+    <ProtectedRoute allowedRole="teacher">
+      <TeacherDashboard />
+    </ProtectedRoute>
+  }
+/>
 
       <Route
-        path="/teacher/lessons"
-        element={<TeacherLessonsPage />}
-      />
+  path="/teacher/lessons"
+  element={
+    <ProtectedRoute allowedRole="teacher">
+      <TeacherLessonsPage />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/teacher/lessons/new"
+  element={
+    <ProtectedRoute allowedRole="teacher">
+      <NewLessonPage />
+    </ProtectedRoute>
+  }
+/>
 
       <Route
-        path="/teacher/lessons/new"
-        element={<NewLessonPage />}
-      />
-
-      <Route
-        path="/student"
-        element={<StudentDashboard />}
-      />
+  path="/student"
+  element={
+    <ProtectedRoute allowedRole="student">
+      <StudentDashboard />
+    </ProtectedRoute>
+  }
+/>
 
       <Route
         path="/lessons/:lessonId"
@@ -53,6 +72,21 @@ function App() {
         path="*"
         element={<NotFoundPage />}
       />
+
+      <Route
+  path="/login"
+  element={<DemoLoginPage />}
+/>
+
+<Route
+  path="/teacher/questions"
+  element={
+    <ProtectedRoute allowedRole="teacher">
+      <TeacherQuestionsPage />
+    </ProtectedRoute>
+  }
+/>
+
     </Routes>
   )
 }

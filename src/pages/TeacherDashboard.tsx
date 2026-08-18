@@ -1,366 +1,318 @@
 import {
-  type FormEvent,
   useEffect,
   useState,
 } from "react"
 
+import { Link } from "react-router-dom"
+
 import Header from "../components/Header"
-import LessonList from "../components/LessonList"
 import QuestionCard from "../components/QuestionCard"
 import Sidebar from "../components/Sidebar"
 import SummaryCard from "../components/SummaryCard"
 
-import { subjectLabels } from "../constants/lessonLabels"
+import { users } from "../data/mockData"
 
 import {
-  lessons as initialLessons,
-  questions,
-  users,
-} from "../data/mockData"
-
-import type { Lesson } from "../types"
+  getLessons,
+  getQuestions,
+  type LessonResponse,
+  type QuestionResponse,
+} from "../services/api"
 
 function TeacherDashboard() {
   const [lessonList, setLessonList] =
-  useState<Lesson[]>(() => {
-    const savedLessons =
-      localStorage.getItem("lessonList")
+    useState<LessonResponse[]>([])
 
-    if (!savedLessons) {
-      return initialLessons
-    }
+  const [questionList, setQuestionList] =
+    useState<QuestionResponse[]>([])
 
-    try {
-      return JSON.parse(savedLessons) as Lesson[]
-    } catch {
-      return initialLessons
-    }
-  })
-  useEffect(() => {
-  localStorage.setItem(
-    "lessonList",
-    JSON.stringify(lessonList)
-  )
-}, [lessonList])
+  const [isLoadingLessons, setIsLoadingLessons] =
+    useState(true)
 
-const [formError, setFormError] = useState("")
-  
-    const [showOnlyPending, setShowOnlyPending] =
-  useState(false)
+  const [isLoadingQuestions, setIsLoadingQuestions] =
+    useState(true)
+
+  const [lessonError, setLessonError] =
+    useState("")
+
+  const [questionError, setQuestionError] =
+    useState("")
+
   const totalLessons = lessonList.length
-  const [lessonTitle, setLessonTitle] = useState("")
-  const [lessonSubject, setLessonSubject] =
-    useState<Lesson["subject"]>("math")
-
-  const [lessonGrade, setLessonGrade] =
-    useState(6)
-    const [lessonDescription, setLessonDescription] =
-  useState("")
-
-const [lessonDuration, setLessonDuration] =
-  useState(30)
-
 
   const totalStudents = users.filter(
     (user) => user.role === "student"
   ).length
 
-  const pendingQuestions = questions.filter(
-    (question) => question.status === "pending"
+  const pendingQuestions = questionList.filter(
+    (question) =>
+      question.status === "pending"
   ).length
 
-  const visibleQuestions = showOnlyPending
-  ? questions.filter(
-      (question) => question.status === "pending"
+  const recentLessons = lessonList.slice(0, 3)
+
+  const recentQuestions = questionList
+    .filter(
+      (question) =>
+        question.status === "pending"
     )
-  : questions
-  function handleSubmit(
-  event: FormEvent<HTMLFormElement>
-) {
-  event.preventDefault()
+    .slice(0, 3)
 
-  const trimmedTitle = lessonTitle.trim()
-  const trimmedDescription = lessonDescription.trim()
+  useEffect(() => {
+    async function loadLessons() {
+      try {
+        setIsLoadingLessons(true)
 
-  if (lessonTitle.trim() === "") {
-  setFormError(
-    "Ders başlığı boş bırakılamaz. Lütfen bir ders başlığı yazın."
-  )
-  return
-}
+        const lessons =
+          await getLessons()
 
-if (lessonDescription.trim() === "") {
-  setFormError(
-    "Lütfen ders hakkında kısa bir açıklama yazın."
-  )
-  return
-}
+        setLessonList(lessons)
+      } catch (error) {
+        setLessonError(
+          error instanceof Error
+            ? error.message
+            : "Dersler yüklenemedi."
+        )
+      } finally {
+        setIsLoadingLessons(false)
+      }
+    }
 
-if (lessonDuration <= 0) {
-  setFormError(
-    "Tahmini süre 1 dakikadan büyük olmalıdır."
-  )
-  return
-}
+    loadLessons()
+  }, [])
 
-  const newLesson: Lesson = {
-    id: `lesson-${Date.now()}`,
-    title: trimmedTitle,
-    subject: lessonSubject,
-    grade: lessonGrade,
-    description: trimmedDescription,
-    estimatedDuration: lessonDuration,
-    isPublished: false,
-    teacherId: "teacher-1",
+  useEffect(() => {
+    async function loadQuestions() {
+      try {
+        setIsLoadingQuestions(true)
+
+        const questions =
+          await getQuestions()
+
+        setQuestionList(questions)
+      } catch (error) {
+        setQuestionError(
+          error instanceof Error
+            ? error.message
+            : "Sorular yüklenemedi."
+        )
+      } finally {
+        setIsLoadingQuestions(false)
+      }
+    }
+
+    loadQuestions()
+  }, [])
+
+  function handleQuestionAnswered(
+    questionId: string
+  ) {
+    setQuestionList((currentQuestions) =>
+      currentQuestions.map((question) =>
+        question.id === questionId
+          ? {
+              ...question,
+              status: "answered",
+            }
+          : question
+      )
+    )
   }
 
-  setLessonList((currentLessons) => [
-    ...currentLessons,
-    newLesson,
-  ])
-
-  setLessonTitle("")
-  setLessonSubject("math")
-  setLessonGrade(6)
-  setLessonDescription("")
-  setLessonDuration(30)
-  setFormError("")
-}
-function handleDeleteLesson(lessonId: string) {
-  setLessonList((currentLessons) =>
-    currentLessons.filter(
-      (lesson) => lesson.id !== lessonId
-    )
-  )
-}
-function handleToggleLessonPublished(
-  lessonId: string
-) {
-  setLessonList((currentLessons) =>
-    currentLessons.map((lesson) => {
-      if (lesson.id === lessonId) {
-        return {
-          ...lesson,
-          isPublished: !lesson.isPublished,
-        }
-      }
-
-      return lesson
-    })
-  )
-}
   return (
     <div className="dashboard">
       <Sidebar
-  title="Menü"
-  menuItems={[
-    {
-      label: "Genel Bakış",
-      path: "/teacher",
-    },
-    {
-      label: "Dersler",
-      path: "/teacher/lessons",
-    },
-    {
-      label: "Yeni Ders Oluştur",
-      path: "/teacher/lessons/new",
-    },
-  ]}
-/>
+        title="Öğretmen"
+        menuItems={[
+          {
+            label: "Genel Bakış",
+            path: "/teacher",
+          },
+          {
+            label: "Dersler",
+            path: "/teacher/lessons",
+          },
+          {
+            label: "Sorular",
+            path: "/teacher/questions",
+          },
+          {
+            label: "Yeni Ders Oluştur",
+            path: "/teacher/lessons/new",
+          },
+        ]}
+      />
 
       <main className="dashboard-main">
         <Header
-          title="Öğretmen Paneli"
+          title="Genel Bakış"
           teacherName="Zehra Ersoy"
         />
 
-        <section className="dashboard-section">
-          <h2>Özet</h2>
+        <section className="teacher-welcome">
+          <div>
+            <p className="section-eyebrow">
+              Öğretmen Paneli
+            </p>
 
-          <div className="summary-grid">
-            <SummaryCard
-              title="Toplam Ders"
-              value={totalLessons}
-            />
+            <h1>
+              Merhaba Zehra 👋
+            </h1>
 
-            <SummaryCard
-              title="Toplam Öğrenci"
-              value={totalStudents}
-            />
-
-            <SummaryCard
-              title="Bekleyen Sorular"
-              value={pendingQuestions}
-            />
+            <p>
+              Derslerini ve öğrenci sorularını
+              buradan kolayca takip edebilirsin.
+            </p>
           </div>
         </section>
 
-        <div className="content-grid">
-  <section className="dashboard-section">
-    <h2>Dersler</h2>
+        <section className="summary-grid">
+          <SummaryCard
+            title="Toplam Ders"
+            value={totalLessons}
+          />
 
-   <form
-  className="lesson-form"
-  onSubmit={handleSubmit}
->
-  <div className="form-field">
-    <label htmlFor="lesson-title">
-      Ders başlığı
-    </label>
+          <SummaryCard
+            title="Bekleyen Sorular"
+            value={pendingQuestions}
+          />
 
-    <input
-      id="lesson-title"
-      type="text"
-      value={lessonTitle}
-      onChange={(event) =>
-        setLessonTitle(event.target.value)
-      }
-    />
-  </div>
+          <SummaryCard
+            title="Toplam Öğrenci"
+            value={totalStudents}
+          />
+        </section>
 
-  <div className="form-field">
-    <label htmlFor="lesson-subject">
-      Ders türü
-    </label>
+        <section className="quick-actions">
+          <Link
+            to="/teacher/lessons/new"
+            className="primary-action"
+          >
+            + Yeni Ders Oluştur
+          </Link>
 
-    <select
-      id="lesson-subject"
-      value={lessonSubject}
-      onChange={(event) =>
-        setLessonSubject(
-          event.target.value as Lesson["subject"]
-        )
-      }
-    >
-      <option value="math">Matematik</option>
-      <option value="science">Fen</option>
-      <option value="english">İngilizce</option>
-    </select>
-  </div>
+          <a
+            href="#questions"
+            className="secondary-action"
+          >
+            Bekleyen Soruları Gör
+          </a>
+        </section>
 
-  <div className="form-field">
-    <label htmlFor="lesson-grade">
-      Sınıf seviyesi
-    </label>
+        <div className="teacher-overview-grid">
+          <section className="dashboard-section">
+            <div className="section-header">
+              <div>
+                <p className="section-eyebrow">
+                  Ders Yönetimi
+                </p>
 
-    <input
-      id="lesson-grade"
-      type="number"
-      min={5}
-      max={8}
-      value={lessonGrade}
-      onChange={(event) =>
-        setLessonGrade(
-          Number(event.target.value)
-        )
-      }
-    />
-  </div>
+                <h2>Dersler</h2>
+              </div>
 
-  <div className="form-field">
-    <label htmlFor="lesson-description">
-      Açıklama
-    </label>
+              <Link
+                to="/teacher/lessons"
+                className="text-link"
+              >
+                Tümünü Gör
+              </Link>
+            </div>
 
-    <textarea
-      id="lesson-description"
-      value={lessonDescription}
-      onChange={(event) =>
-        setLessonDescription(
-          event.target.value
-        )
-      }
-    />
-  </div>
+            {isLoadingLessons ? (
+              <p>Dersler yükleniyor...</p>
+            ) : lessonError ? (
+              <p className="form-error">
+                {lessonError}
+              </p>
+            ) : recentLessons.length === 0 ? (
+              <div className="empty-state">
+                <p>
+                  Henüz ders oluşturulmamış.
+                </p>
+              </div>
+            ) : (
+              <div className="overview-list">
+                {recentLessons.map((lesson) => (
+                  <article
+                    className="overview-card"
+                    key={lesson.id}
+                  >
+                    <div>
+                      <span className="soft-badge">
+                        {lesson.course.title}
+                      </span>
 
-  <div className="form-field">
-    <label htmlFor="lesson-duration">
-      Tahmini süre (dakika)
-    </label>
+                      <h3>{lesson.title}</h3>
 
-    <input
-      id="lesson-duration"
-      type="number"
-      min={1}
-      value={lessonDuration}
-      onChange={(event) =>
-        setLessonDuration(
-          Number(event.target.value)
-        )
-      }
-    />
-  </div>
+                      <p>
+                        {lesson.content}
+                      </p>
+                    </div>
 
-  {formError && (
-    <p className="form-error">
-      {formError}
-    </p>
-  )}
+                    <Link
+                      to={`/lessons/${lesson.id}`}
+                      className="text-link"
+                    >
+                      Detayı Gör
+                    </Link>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
 
-  <button type="submit">
-  Yeni Ders Oluştur
-</button>
-</form>
+          <section
+            className="dashboard-section"
+            id="questions"
+          >
+            <div className="section-header">
+              <div>
+                <p className="section-eyebrow">
+                  Öğrenci Soruları
+                </p>
 
-    <p>
-  Önizleme: {lessonTitle || "Başlık girilmedi"} —{" "}
-  {subjectLabels[lessonSubject]} — {lessonGrade}. sınıf
-</p>
+                <h2>Bekleyen Sorular</h2>
+              </div>
 
-  <LessonList
-  lessonList={lessonList}
-  onDeleteLesson={handleDeleteLesson}
-  onToggleLessonPublished={
-    handleToggleLessonPublished
+              <span className="pending-count">
+                {pendingQuestions}
+              </span>
+            </div>
+
+            {isLoadingQuestions ? (
+              <p>Sorular yükleniyor...</p>
+            ) : questionError ? (
+              <p className="form-error">
+                {questionError}
+              </p>
+            ) : recentQuestions.length === 0 ? (
+              <div className="empty-state">
+                <p>
+                  Şu anda bekleyen soru yok.
+                </p>
+              </div>
+            ) : (
+              <div className="overview-list">
+                {recentQuestions.map(
+                  (question) => (
+                    <QuestionCard
+  key={question.id}
+  questionId={question.id}
+  studentName={question.student.name}
+  content={question.content}
+  status={question.status}
+  answerContent={
+    question.answer?.content
+  }
+  onAnswered={
+    handleQuestionAnswered
   }
 />
-  </section>
-          <section className="dashboard-section">
-            <h2>Sorular</h2>
-
-  <button
-    onClick={() =>
-      setShowOnlyPending(!showOnlyPending)
-    }
-  >
-    {showOnlyPending
-      ? "Tüm Soruları Göster"
-      : "Yalnızca Bekleyen Soruları Göster"}
-  </button>
-
-  {visibleQuestions.length === 0 ? (
-  <div className="empty-state">
-    <h3>Gösterilecek soru bulunmuyor</h3>
-
-    <p>
-      {showOnlyPending
-        ? "Şu anda bekleyen bir öğrenci sorusu yok."
-        : "Henüz öğrenciler tarafından soru gönderilmedi."}
-    </p>
-  </div>
-) : (
-  visibleQuestions.map((question) => {
-    const student = users.find(
-      (user) =>
-        user.id === question.studentId
-    )
-
-    return (
-      <QuestionCard
-        key={question.id}
-        studentName={
-          student?.name ??
-          "Bilinmeyen öğrenci"
-        }
-        content={question.content}
-        status={question.status}
-      />
-    )
-  })
-)}
-</section>
-
+                  )
+                )}
+              </div>
+            )}
+          </section>
         </div>
       </main>
     </div>

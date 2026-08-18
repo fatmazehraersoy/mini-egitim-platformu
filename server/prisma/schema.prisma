@@ -1,0 +1,82 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  teacher
+  student
+}
+
+enum CourseSubject {
+  math
+  science
+  english
+}
+
+enum QuestionStatus {
+  pending
+  answered
+  escalated
+}
+
+enum AnswerSource {
+  ai
+  teacher
+}
+
+model User {
+  id    String   @id @default(uuid())
+  name  String
+  email String   @unique
+  role  UserRole
+
+  courses   Course[]   @relation("TeacherCourses")
+  questions Question[] @relation("StudentQuestions")
+}
+
+model Course {
+  id        String        @id @default(uuid())
+  title     String
+  subject   CourseSubject
+  grade     Int
+  teacherId String
+
+  teacher User     @relation("TeacherCourses", fields: [teacherId], references: [id])
+  lessons Lesson[]
+}
+
+model Lesson {
+  id       String @id @default(uuid())
+  title    String
+  content  String
+  courseId String
+
+  course    Course     @relation(fields: [courseId], references: [id])
+  questions Question[]
+}
+
+model Question {
+  id        String         @id @default(uuid())
+  content   String
+  status    QuestionStatus @default(pending)
+  studentId String
+  lessonId  String
+
+  student User    @relation("StudentQuestions", fields: [studentId], references: [id])
+  lesson  Lesson  @relation(fields: [lessonId], references: [id])
+  answer  Answer?
+}
+
+model Answer {
+  id         String       @id @default(uuid())
+  content    String
+  source     AnswerSource
+  questionId String       @unique
+
+  question Question @relation(fields: [questionId], references: [id])
+}
