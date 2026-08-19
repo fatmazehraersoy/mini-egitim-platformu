@@ -11,28 +11,16 @@ type SidebarProps = {
   menuItems: MenuItem[]
 }
 
-function getMenuIcon(label: string) {
-  if (label === "Genel Bakış") {
-    return "⌂"
-  }
-
-  if (label === "Dersler") {
-    return "▤"
-  }
-
-  if (label === "Yeni Ders Oluştur") {
-    return "+"
-  }
-
-  return "•"
-}
-
 function Sidebar({
   title,
   menuItems,
 }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] =
-    useState(false)
+  useState(() =>
+    window.matchMedia(
+      "(max-width: 820px)",
+    ).matches,
+  )
 
   return (
     <aside
@@ -63,40 +51,31 @@ function Sidebar({
         </button>
       </div>
 
-      <nav>
-        <ul>
-          {menuItems.map((item) => (
-            <li key={item.path}>
-              <NavLink
-                to={item.path}
-                end={
-                  item.path === "/teacher"
-                }
-                title={
-                  isCollapsed
-                    ? item.label
-                    : undefined
-                }
-                className={({ isActive }) =>
-                  isActive
-                    ? "sidebar-link sidebar-link-active"
-                    : "sidebar-link"
-                }
-              >
-                <span className="sidebar-icon">
-                  {getMenuIcon(item.label)}
-                </span>
-
-                {!isCollapsed && (
-                  <span>
-                    {item.label}
-                  </span>
-                )}
-              </NavLink>
-            </li>
-          ))}
-        </ul>
-      </nav>
+      {!isCollapsed && (
+        <nav>
+          <ul>
+            {menuItems.map((item) => (
+              <li key={item.path}>
+                <NavLink
+                  to={item.path}
+                  end={
+                    item.path === "/teacher"
+                  }
+                  className={({
+                    isActive,
+                  }) =>
+                    isActive
+                      ? "sidebar-link sidebar-link-active"
+                      : "sidebar-link"
+                  }
+                >
+                  {item.label}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
     </aside>
   )
 }

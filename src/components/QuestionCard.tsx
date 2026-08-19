@@ -9,15 +9,18 @@ type QuestionCardProps = {
   questionId: string
   studentName: string
   content: string
-  status: "pending" | "answered" | "escalated"
+  status:
+    | "pending"
+    | "answered"
+    | "escalated"
   teacherAnswer?: string | null
   onAnswered: (questionId: string) => void
 }
 
 const statusLabels = {
-  pending: "Beklemede",
+  pending: "Bekliyor",
   answered: "Cevaplandı",
-  escalated: "Öğretmene Yönlendirildi",
+  escalated: "Yönlendirildi",
 }
 
 function QuestionCard({
@@ -28,27 +31,40 @@ function QuestionCard({
   teacherAnswer,
   onAnswered,
 }: QuestionCardProps) {
+  const [
+    showAnswerForm,
+    setShowAnswerForm,
+  ] = useState(false)
 
-  const [showAnswerForm, setShowAnswerForm] =
-    useState(false)
+  const [
+    answerContent,
+    setAnswerContent,
+  ] = useState("")
 
-  const [answerContent, setAnswerContent] =
-    useState("")
+  const [
+    submittedAnswer,
+    setSubmittedAnswer,
+  ] = useState<string | null>(null)
 
   const [error, setError] =
     useState("")
 
-  const [isSubmitting, setIsSubmitting] =
-    useState(false)
+  const [
+    isSubmitting,
+    setIsSubmitting,
+  ] = useState(false)
 
   async function handleSubmit(
-    event: FormEvent<HTMLFormElement>
+    event: FormEvent<HTMLFormElement>,
   ) {
     event.preventDefault()
 
-    if (!answerContent.trim()) {
+    const cleanAnswer =
+      answerContent.trim()
+
+    if (!cleanAnswer) {
       setError(
-        "Cevap metni boş bırakılamaz."
+        "Cevap metni boş bırakılamaz.",
       )
       return
     }
@@ -60,8 +76,12 @@ function QuestionCard({
       await answerQuestion(
         questionId,
         {
-          content: answerContent.trim(),
-        }
+          content: cleanAnswer,
+        },
+      )
+
+      setSubmittedAnswer(
+        cleanAnswer,
       )
 
       onAnswered(questionId)
@@ -72,59 +92,107 @@ function QuestionCard({
       setError(
         error instanceof Error
           ? error.message
-          : "Soru cevaplanamadı."
+          : "Soru cevaplanamadı.",
       )
     } finally {
       setIsSubmitting(false)
     }
   }
 
+  const displayedAnswer =
+    teacherAnswer ??
+    submittedAnswer
+
   return (
-    <article>
-      <h3>Öğrenci: {studentName}</h3>
+    <article className="teacher-question-card">
+      <div className="teacher-question-card-header">
+        <div>
+          <span className="question-student-label">
+            Öğrenci
+          </span>
 
-      <p>Soru: {content}</p>
+          <h3>
+            {studentName}
+          </h3>
+        </div>
 
-      <p>
-        Durum: {statusLabels[status]}
-      </p>
-      {status === "answered" && teacherAnswer && (
-  <div className="teacher-answer">
-    <strong>Verdiğiniz cevap</strong>
-    <p>{teacherAnswer}</p>
-  </div>
-)}
+        <span
+          className={`question-status-badge question-status-${status}`}
+        >
+          {statusLabels[status]}
+        </span>
+      </div>
+
+      <div className="teacher-question-content">
+        <span className="question-content-label">
+          Soru
+        </span>
+
+        <p>{content}</p>
+      </div>
+
+      {status === "answered" &&
+        displayedAnswer && (
+          <div className="teacher-answer-box">
+            <span>
+              Verdiğiniz Cevap
+            </span>
+
+            <p>
+              {displayedAnswer}
+            </p>
+          </div>
+        )}
 
       {status === "pending" && (
-        <>
-          <button
-            type="button"
-            onClick={() =>
-              setShowAnswerForm(
-                !showAnswerForm
-              )
-            }
-          >
-            Soruyu Cevapla
-          </button>
+        <div className="question-answer-area">
+          {!showAnswerForm && (
+            <button
+              type="button"
+              className="answer-question-button"
+              onClick={() => {
+                setShowAnswerForm(true)
+                setError("")
+              }}
+            >
+              Soruyu Cevapla
+            </button>
+          )}
 
           {showAnswerForm && (
-            <form onSubmit={handleSubmit}>
-              <div className="form-field">
-                <label htmlFor={`answer-${questionId}`}>
-                  Cevabınız
-                </label>
+            <form
+              className="question-answer-form"
+              onSubmit={handleSubmit}
+            >
+              <div className="question-answer-form-header">
+                <div>
+                  <h4>
+                    Cevabınızı Yazın
+                  </h4>
 
-                <textarea
-                  id={`answer-${questionId}`}
-                  value={answerContent}
-                  onChange={(event) =>
-                    setAnswerContent(
-                      event.target.value
-                    )
-                  }
-                />
+                  <p>
+                    Öğrenciye açıklayıcı ve
+                    anlaşılır bir cevap
+                    gönderin.
+                  </p>
+                </div>
               </div>
+
+              <textarea
+                id={`answer-${questionId}`}
+                value={answerContent}
+                onChange={(event) => {
+                  setAnswerContent(
+                    event.target.value,
+                  )
+
+                  if (error) {
+                    setError("")
+                  }
+                }}
+                placeholder="Cevabınızı buraya yazın..."
+                rows={5}
+              />
 
               {error && (
                 <p className="form-error">
@@ -132,17 +200,32 @@ function QuestionCard({
                 </p>
               )}
 
-              <button
-                type="submit"
-                disabled={isSubmitting}
-              >
-                {isSubmitting
-                  ? "Gönderiliyor..."
-                  : "Cevabı Gönder"}
-              </button>
+              <div className="question-answer-actions">
+                <button
+                  type="button"
+                  className="answer-cancel-button"
+                  onClick={() => {
+                    setShowAnswerForm(false)
+                    setAnswerContent("")
+                    setError("")
+                  }}
+                >
+                  Vazgeç
+                </button>
+
+                <button
+                  type="submit"
+                  className="answer-submit-button"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting
+                    ? "Gönderiliyor..."
+                    : "Cevabı Gönder"}
+                </button>
+              </div>
             </form>
           )}
-        </>
+        </div>
       )}
     </article>
   )

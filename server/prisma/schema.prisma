@@ -37,6 +37,7 @@ model User {
 
   courses   Course[]   @relation("TeacherCourses")
   questions Question[] @relation("StudentQuestions")
+  enrollments Enrollment[]
 }
 
 model Course {
@@ -48,16 +49,18 @@ model Course {
 
   teacher User     @relation("TeacherCourses", fields: [teacherId], references: [id])
   lessons Lesson[]
+  enrollments Enrollment[]
 }
 
 model Lesson {
-  id       String @id @default(uuid())
-  title    String
-  content  String
-  courseId String
-
-  course    Course     @relation(fields: [courseId], references: [id])
-  questions Question[]
+  id            String @id @default(uuid())
+  title         String
+  content       String
+  coverImageUrl String?
+  coverImageAlt String?
+  courseId      String
+  course        Course @relation(fields: [courseId], references: [id])
+  questions     Question[]
 }
 
 model Question {
@@ -79,4 +82,15 @@ model Answer {
   questionId String       @unique
 
   question Question @relation(fields: [questionId], references: [id])
+}
+
+model Enrollment {
+  studentId String
+  courseId  String
+  createdAt DateTime @default(now())
+
+  student User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@id([studentId, courseId])
 }

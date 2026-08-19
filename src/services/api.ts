@@ -27,6 +27,8 @@ export type LessonResponse = {
   id: string
   title: string
   content: string
+  coverImageUrl: string | null
+  coverImageAlt: string | null
   courseId: string
   course: CourseResponse
 }
@@ -93,6 +95,86 @@ export async function createLesson(
     throw new Error(
       data.message ??
         "Ders oluşturulamadı."
+    )
+  }
+
+  return data
+}
+
+export type UpdateLessonInput = {
+  title?: string
+  content?: string
+  courseId?: string
+}
+
+export async function updateLesson(
+  lessonId: string,
+  lesson: UpdateLessonInput,
+): Promise<LessonResponse> {
+  const response = await fetch(
+    `${API_URL}/lessons/${lessonId}`,
+    {
+      method: "PATCH",
+      headers: getAuthHeaders(),
+      body: JSON.stringify(lesson),
+    },
+  )
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    throw new Error(
+      data.message ??
+        "Ders güncellenirken bir hata oluştu.",
+    )
+  }
+
+  return data
+}
+
+export async function uploadLessonCover(
+  lessonId: string,
+  file: File,
+  altText: string,
+): Promise<LessonResponse> {
+  const userId = getDemoUserId()
+
+  const formData = new FormData()
+
+  formData.append(
+    "coverImage",
+    file,
+  )
+
+  formData.append(
+    "alt",
+    altText,
+  )
+
+  const response = await fetch(
+    `${API_URL}/lessons/${lessonId}/cover-image`,
+    {
+      method: "POST",
+
+      headers: {
+        ...(userId
+          ? {
+              "x-demo-user-id":
+                userId,
+            }
+          : {}),
+      },
+
+      body: formData,
+    },
+  )
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    throw new Error(
+      data.message ??
+        "Kapak görseli yüklenemedi.",
     )
   }
 
@@ -262,6 +344,123 @@ export async function getMyQuestions(): Promise<
     throw new Error(
       data.message ??
         "Sorularınız alınamadı."
+    )
+  }
+
+  return data
+}
+
+export type StudentCourseResponse = {
+  id: string
+  title: string
+  subject:
+    | "math"
+    | "science"
+    | "english"
+  grade: number
+}
+
+export type StudentQuestionResponse = {
+  id: string
+  content: string
+  status:
+    | "pending"
+    | "answered"
+    | "escalated"
+  lessonId: string
+  lessonTitle: string
+  answer: {
+    id: string
+    content: string
+    source: "teacher" | "ai"
+    questionId: string
+  } | null
+}
+
+export type StudentResponse = {
+  id: string
+  name: string
+  email: string
+  grades: number[]
+
+  courses:
+    StudentCourseResponse[]
+
+  totalQuestions: number
+  answeredQuestions: number
+  pendingQuestions: number
+
+  questions:
+    StudentQuestionResponse[]
+}
+
+export async function getStudents(): Promise<
+  StudentResponse[]
+> {
+  const response = await fetch(
+    `${API_URL}/students`,
+    {
+      headers: getAuthHeaders(),
+    },
+  )
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    throw new Error(
+      data.message ??
+        "Öğrenciler yüklenemedi.",
+    )
+  }
+
+  return data
+}
+
+export type CurrentUserResponse = {
+  id: string
+  name: string
+  email: string
+  role: "teacher" | "student"
+}
+
+export async function getCurrentUser(): Promise<
+  CurrentUserResponse
+> {
+  const response = await fetch(
+    `${API_URL}/me`,
+    {
+      headers: getAuthHeaders(),
+    },
+  )
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    throw new Error(
+      data.message ??
+        "Kullanıcı bilgisi alınamadı.",
+    )
+  }
+
+  return data
+}
+
+export async function getMyLessons(): Promise<
+  LessonResponse[]
+> {
+  const response = await fetch(
+    `${API_URL}/my/lessons`,
+    {
+      headers: getAuthHeaders(),
+    },
+  )
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    throw new Error(
+      data.message ??
+        "Dersleriniz yüklenemedi.",
     )
   }
 

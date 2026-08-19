@@ -128,14 +128,18 @@ function TeacherDashboard() {
             label: "Genel Bakış",
             path: "/teacher",
           },
-          {
-            label: "Dersler",
-            path: "/teacher/lessons",
-          },
-          {
-            label: "Sorular",
-            path: "/teacher/questions",
-          },
+         {
+  label: "Dersler",
+  path: "/teacher/lessons",
+},
+{
+  label: "Öğrenciler",
+  path: "/teacher/students",
+},
+{
+  label: "Sorular",
+  path: "/teacher/questions",
+},
           {
             label: "Yeni Ders Oluştur",
             path: "/teacher/lessons/new",
@@ -177,10 +181,15 @@ function TeacherDashboard() {
             value={pendingQuestions}
           />
 
-          <SummaryCard
-            title="Toplam Öğrenci"
-            value={totalStudents}
-          />
+          <Link
+  to="/teacher/students"
+  className="summary-card-link"
+>
+  <SummaryCard
+    title="Toplam Öğrenci"
+    value={totalStudents}
+  />
+</Link>
         </section>
 
         <section className="quick-actions">
@@ -233,30 +242,32 @@ function TeacherDashboard() {
             ) : (
               <div className="overview-list">
                 {recentLessons.map((lesson) => (
-                  <article
-                    className="overview-card"
-                    key={lesson.id}
-                  >
-                    <div>
-                      <span className="soft-badge">
-                        {lesson.course.title}
-                      </span>
+  <article
+    className="overview-card"
+    key={lesson.id}
+  >
+    <div>
+      <span className="soft-badge">
+        {lesson.course.title}
+      </span>
 
-                      <h3>{lesson.title}</h3>
+      <h3>
+        {lesson.title}
+      </h3>
 
-                      <p>
-                        {lesson.content}
-                      </p>
-                    </div>
+      <p className="overview-lesson-meta">
+        {lesson.course.grade}. Sınıf
+      </p>
+    </div>
 
-                    <Link
-                      to={`/lessons/${lesson.id}`}
-                      className="text-link"
-                    >
-                      Detayı Gör
-                    </Link>
-                  </article>
-                ))}
+    <Link
+      to={`/teacher/lessons/${lesson.id}`}
+      className="text-link"
+    >
+      Detayı Gör →
+    </Link>
+  </article>
+))}
               </div>
             )}
           </section>
@@ -301,9 +312,9 @@ function TeacherDashboard() {
   studentName={question.student.name}
   content={question.content}
   status={question.status}
-  answerContent={
-    question.answer?.content
-  }
+  teacherAnswer={
+  question.answer?.content
+}
   onAnswered={
     handleQuestionAnswered
   }
