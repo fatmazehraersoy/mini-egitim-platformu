@@ -34,3 +34,6 @@ server/skills-lock.json
 
 # Prisma generated client
 server/src/generated/prisma/
+
+# Uploaded files
+server/uploads/

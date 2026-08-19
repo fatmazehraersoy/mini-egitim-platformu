@@ -13,6 +13,11 @@ import express, {
 import { prisma } from "./lib/prisma.js"
 import { getOpenAIClient } from "./lib/openai.js"
 
+import {
+  lessonCoverUpload,
+  uploadsRoot,
+} from "./lib/upload.js"
+
 dotenv.config()
 
 const app = express()
@@ -20,6 +25,10 @@ const port = Number(process.env.PORT) || 3000
 
 app.use(cors())
 app.use(express.json())
+app.use(
+  "/uploads",
+  express.static(uploadsRoot),
+)
 
 type CreateLessonBody = {
   title?: string
@@ -90,6 +99,153 @@ app.get("/courses", async (_request, response, next) => {
     next(error)
   }
 })
+
+app.get(
+  "/students",
+  demoAuth,
+  requireRole("teacher"),
+  async (
+    _request: Request,
+    response: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const teacher = response.locals.user
+
+      const students =
+        await prisma.user.findMany({
+          where: {
+            role: "student",
+
+            enrollments: {
+              some: {
+                course: {
+                  teacherId: teacher.id,
+                },
+              },
+            },
+          },
+
+          include: {
+            enrollments: {
+              where: {
+                course: {
+                  teacherId: teacher.id,
+                },
+              },
+
+              include: {
+                course: true,
+              },
+            },
+
+            questions: {
+              where: {
+                lesson: {
+                  course: {
+                    teacherId: teacher.id,
+                  },
+                },
+              },
+
+              include: {
+                lesson: true,
+                answer: true,
+              },
+
+              orderBy: {
+                id: "desc",
+              },
+            },
+          },
+
+          orderBy: {
+            name: "asc",
+          },
+        })
+
+      const result = students.map(
+        (student) => {
+          const grades = Array.from(
+            new Set(
+              student.enrollments.map(
+                (enrollment) =>
+                  enrollment.course.grade,
+              ),
+            ),
+          ).sort((a, b) => a - b)
+
+          const totalQuestions =
+            student.questions.length
+
+          const answeredQuestions =
+            student.questions.filter(
+              (question) =>
+                question.status ===
+                "answered",
+            ).length
+
+          const pendingQuestions =
+            student.questions.filter(
+              (question) =>
+                question.status ===
+                "pending",
+            ).length
+
+          return {
+            id: student.id,
+            name: student.name,
+            email: student.email,
+
+            grades,
+
+            courses:
+              student.enrollments.map(
+                (enrollment) => ({
+                  id:
+                    enrollment.course.id,
+                  title:
+                    enrollment.course
+                      .title,
+                  subject:
+                    enrollment.course
+                      .subject,
+                  grade:
+                    enrollment.course
+                      .grade,
+                }),
+              ),
+
+            totalQuestions,
+            answeredQuestions,
+            pendingQuestions,
+
+            questions:
+              student.questions.map(
+                (question) => ({
+                  id: question.id,
+                  content:
+                    question.content,
+                  status:
+                    question.status,
+                  lessonId:
+                    question.lessonId,
+                  lessonTitle:
+                    question.lesson.title,
+                  answer:
+                    question.answer,
+                }),
+              ),
+          }
+        },
+      )
+
+      response.status(200).json(result)
+    } catch (error) {
+      next(error)
+    }
+  },
+)
 /*
   GET /lessons
   PostgreSQL'deki bütün dersleri getirir.
@@ -245,6 +401,63 @@ app.get(
       next(error)
     }
   }
+)
+
+app.get(
+  "/me",
+  demoAuth,
+  (
+    _request: Request,
+    response: Response,
+  ) => {
+    response.status(200).json(
+      response.locals.user,
+    )
+  },
+)
+
+app.get(
+  "/my/lessons",
+  demoAuth,
+  requireRole("student"),
+  async (
+    _request: Request,
+    response: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const student =
+        response.locals.user
+
+      const lessons =
+        await prisma.lesson.findMany({
+          where: {
+            course: {
+              enrollments: {
+                some: {
+                  studentId:
+                    student.id,
+                },
+              },
+            },
+          },
+
+          include: {
+            course: true,
+          },
+
+          orderBy: {
+            title: "asc",
+          },
+        })
+
+      response
+        .status(200)
+        .json(lessons)
+    } catch (error) {
+      next(error)
+    }
+  },
 )
 /*
   GET /lessons/:id
@@ -463,6 +676,257 @@ app.post(
   }
 )
 
+app.patch(
+  "/lessons/:id",
+  demoAuth,
+  requireRole("teacher"),
+  async (
+    request: Request<
+      { id: string },
+      unknown,
+      {
+        title?: string
+        content?: string
+        courseId?: string
+      }
+    >,
+    response: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { id } = request.params
+      const { title, content, courseId } =
+        request.body ?? {}
+
+      const teacher = response.locals.user
+
+      const lesson = await prisma.lesson.findUnique({
+        where: {
+          id,
+        },
+        include: {
+          course: true,
+        },
+      })
+
+      if (!lesson) {
+        next(
+          new AppError(
+            "Ders bulunamadı.",
+            404,
+          ),
+        )
+        return
+      }
+
+      if (
+        lesson.course.teacherId !== teacher.id
+      ) {
+        next(
+          new AppError(
+            "Bu dersi düzenleme yetkiniz yok.",
+            403,
+          ),
+        )
+        return
+      }
+
+      if (
+        title !== undefined &&
+        !title.trim()
+      ) {
+        next(
+          new AppError(
+            "Ders başlığı boş bırakılamaz.",
+            400,
+          ),
+        )
+        return
+      }
+
+      if (
+        content !== undefined &&
+        !content.trim()
+      ) {
+        next(
+          new AppError(
+            "Ders içeriği boş bırakılamaz.",
+            400,
+          ),
+        )
+        return
+      }
+
+      if (courseId !== undefined) {
+        const newCourse =
+          await prisma.course.findUnique({
+            where: {
+              id: courseId,
+            },
+          })
+
+        if (!newCourse) {
+          next(
+            new AppError(
+              "Kurs bulunamadı.",
+              404,
+            ),
+          )
+          return
+        }
+
+        if (
+          newCourse.teacherId !== teacher.id
+        ) {
+          next(
+            new AppError(
+              "Bu kursu kullanma yetkiniz yok.",
+              403,
+            ),
+          )
+          return
+        }
+      }
+
+      const updatedLesson =
+        await prisma.lesson.update({
+          where: {
+            id,
+          },
+          data: {
+            ...(title !== undefined
+              ? { title: title.trim() }
+              : {}),
+            ...(content !== undefined
+              ? { content: content.trim() }
+              : {}),
+            ...(courseId !== undefined
+              ? { courseId }
+              : {}),
+          },
+          include: {
+            course: true,
+          },
+        })
+
+      response.status(200).json(
+        updatedLesson,
+      )
+    } catch (error) {
+      next(error)
+    }
+  },
+)
+
+app.post(
+  "/lessons/:id/cover-image",
+
+  demoAuth,
+
+  requireRole("teacher"),
+
+  async (
+    request: Request<{ id: string }>,
+    response: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { id } = request.params
+      const teacher = response.locals.user
+
+      const lesson =
+        await prisma.lesson.findUnique({
+          where: {
+            id,
+          },
+          include: {
+            course: true,
+          },
+        })
+
+      if (!lesson) {
+        next(
+          new AppError(
+            "Ders bulunamadı.",
+            404,
+          ),
+        )
+        return
+      }
+
+      if (
+        lesson.course.teacherId !==
+        teacher.id
+      ) {
+        next(
+          new AppError(
+            "Bu dersin görselini değiştirme yetkiniz yok.",
+            403,
+          ),
+        )
+        return
+      }
+
+      next()
+    } catch (error) {
+      next(error)
+    }
+  },
+
+  lessonCoverUpload.single(
+    "coverImage",
+  ),
+
+  async (
+    request: Request<{ id: string }>,
+    response: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { id } = request.params
+
+      if (!request.file) {
+        next(
+          new AppError(
+            "Lütfen JPG, PNG veya WebP formatında bir görsel seçin.",
+            400,
+          ),
+        )
+        return
+      }
+
+      const altText =
+        typeof request.body.alt ===
+        "string"
+          ? request.body.alt.trim()
+          : ""
+
+      const coverImageUrl =
+        `/uploads/lessons/${request.file.filename}`
+
+      const updatedLesson =
+        await prisma.lesson.update({
+          where: {
+            id,
+          },
+          data: {
+            coverImageUrl,
+            coverImageAlt:
+              altText || null,
+          },
+          include: {
+            course: true,
+          },
+        })
+
+      response.status(200).json(
+        updatedLesson,
+      )
+    } catch (error) {
+      next(error)
+    }
+  },
+)
 /*
   POST /questions
   PostgreSQL'e yeni öğrenci sorusu ekler.

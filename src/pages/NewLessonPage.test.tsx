@@ -53,10 +53,10 @@ describe("NewLessonPage", () => {
 
     // Act
     await user.click(
-      screen.getByRole("button", {
-        name: "Dersi Oluştur",
-      })
-    )
+  await screen.findByRole("button", {
+    name: "Dersi Oluştur",
+  }),
+)
 
     // Assert
     expect(

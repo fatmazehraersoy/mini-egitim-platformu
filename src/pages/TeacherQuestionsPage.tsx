@@ -101,6 +101,10 @@ function TeacherQuestionsPage() {
             path: "/teacher/lessons",
           },
           {
+  label: "Öğrenciler",
+  path: "/teacher/students",
+},
+          {
             label: "Sorular",
             path: "/teacher/questions",
           },

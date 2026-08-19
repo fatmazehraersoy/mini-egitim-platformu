@@ -1,12 +1,5 @@
-import {
-  useEffect,
-  useState,
-} from "react"
-
-import {
-  Link,
-  useParams,
-} from "react-router-dom"
+import { useEffect, useState } from "react"
+import { Link, useParams } from "react-router-dom"
 
 import Sidebar from "../components/Sidebar"
 import RichTextContent from "../components/RichTextContent"
@@ -16,8 +9,7 @@ import {
   type LessonResponse,
 } from "../services/api"
 
-const API_URL =
-  import.meta.env.VITE_API_URL
+const API_URL = import.meta.env.VITE_API_URL
 
 const subjectLabels = {
   math: "Matematik",
@@ -25,7 +17,7 @@ const subjectLabels = {
   english: "İngilizce",
 }
 
-function LessonDetailPage() {
+function TeacherLessonDetailPage() {
   const { lessonId } = useParams()
 
   const [lesson, setLesson] =
@@ -42,9 +34,7 @@ function LessonDetailPage() {
 
     async function loadLesson() {
       if (!lessonId) {
-        setError(
-          "Ders bilgisi bulunamadı.",
-        )
+        setError("Ders bilgisi bulunamadı.")
         setIsLoading(false)
         return
       }
@@ -54,9 +44,7 @@ function LessonDetailPage() {
         setError("")
 
         const data =
-          await getLessonById(
-            lessonId,
-          )
+          await getLessonById(lessonId)
 
         if (!ignore) {
           setLesson(data)
@@ -86,33 +74,37 @@ function LessonDetailPage() {
   return (
     <div className="dashboard">
       <Sidebar
-  title="Öğrenci"
-  menuItems={[
-    {
-      label: "Genel Bakış",
-      path: "/student",
-    },
-    {
-      label: "Derslerim",
-      path: "/student/lessons",
-    },
-    {
-      label: "Sorularım",
-      path: "/student/questions",
-    },
-    {
-      label: "Soru Sor",
-      path: "/ask",
-    },
-  ]}
-/>
+        title="Öğretmen"
+menuItems={[
+  {
+    label: "Genel Bakış",
+    path: "/teacher",
+  },
+  {
+    label: "Dersler",
+    path: "/teacher/lessons",
+  },
+  {
+  label: "Öğrenciler",
+  path: "/teacher/students",
+},
+  {
+    label: "Sorular",
+    path: "/teacher/questions",
+  },
+  {
+    label: "Yeni Ders Oluştur",
+    path: "/teacher/lessons/new",
+  },
+]}
+      />
 
       <main className="dashboard-main teacher-lesson-detail-page">
         <Link
-          to="/student"
+          to="/teacher/lessons"
           className="back-link"
         >
-          ← Derslerime Dön
+          ← Derslere Dön
         </Link>
 
         {isLoading && (
@@ -137,43 +129,33 @@ function LessonDetailPage() {
                     Ders Detayı
                   </p>
 
-                  <h1>
-                    {lesson.title}
-                  </h1>
+                  <h1>{lesson.title}</h1>
 
                   <div className="lesson-detail-meta">
                     <span>
                       {
                         subjectLabels[
-                          lesson.course
-                            .subject
+                          lesson.course.subject
                         ]
                       }
                     </span>
 
                     <span>
-                      {
-                        lesson.course
-                          .grade
-                      }
-                      . Sınıf
+                      {lesson.course.grade}. Sınıf
                     </span>
 
                     <span>
-                      {
-                        lesson.course
-                          .title
-                      }
+                      {lesson.course.title}
                     </span>
                   </div>
                 </div>
 
                 <Link
-  to={`/ask?lessonId=${lesson.id}`}
-  className="secondary-button"
->
-  Bu Ders Hakkında Soru Sor
-</Link>
+                  to={`/teacher/lessons/${lesson.id}/edit`}
+                  className="secondary-button"
+                >
+                  Dersi Düzenle
+                </Link>
               </section>
 
               {lesson.coverImageUrl && (
@@ -191,8 +173,7 @@ function LessonDetailPage() {
                       <span>
                         {
                           subjectLabels[
-                            lesson.course
-                              .subject
+                            lesson.course.subject
                           ]
                         }
                       </span>
@@ -211,15 +192,13 @@ function LessonDetailPage() {
                     Ders İçeriği
                   </p>
 
-                  <h2>
-                    İçerik
-                  </h2>
+                  <h2>İçerik</h2>
                 </div>
 
                 <RichTextContent
-                  html={lesson.content}
-                  className="lesson-content-body"
-                />
+  html={lesson.content}
+  className="lesson-content-body"
+/>
               </section>
             </>
           )}
@@ -228,4 +207,4 @@ function LessonDetailPage() {
   )
 }
 
-export default LessonDetailPage
+export default TeacherLessonDetailPage

@@ -8,17 +8,21 @@ import {
 import {
   Link,
   useNavigate,
+  useParams,
 } from "react-router-dom"
 
 import Sidebar from "../components/Sidebar"
 import RichTextEditor from "../components/RichTextEditor"
 
 import {
-  createLesson,
   getCourses,
+  getLessonById,
+  updateLesson,
   uploadLessonCover,
   type CourseResponse,
 } from "../services/api"
+
+const API_URL = import.meta.env.VITE_API_URL
 
 const allowedImageTypes = [
   "image/jpeg",
@@ -29,7 +33,8 @@ const allowedImageTypes = [
 const MAX_IMAGE_SIZE =
   5 * 1024 * 1024
 
-function NewLessonPage() {
+function TeacherLessonEditPage() {
+  const { lessonId } = useParams()
   const navigate = useNavigate()
 
   const [title, setTitle] =
@@ -45,6 +50,16 @@ function NewLessonPage() {
     useState<CourseResponse[]>([])
 
   const [
+    existingCoverImageUrl,
+    setExistingCoverImageUrl,
+  ] = useState<string | null>(null)
+
+  const [
+    coverImageAlt,
+    setCoverImageAlt,
+  ] = useState("")
+
+  const [
     selectedCoverFile,
     setSelectedCoverFile,
   ] = useState<File | null>(null)
@@ -53,11 +68,6 @@ function NewLessonPage() {
     coverPreview,
     setCoverPreview,
   ] = useState<string | null>(null)
-
-  const [
-    coverImageAlt,
-    setCoverImageAlt,
-  ] = useState("")
 
   const [isLoading, setIsLoading] =
     useState(true)
@@ -71,32 +81,64 @@ function NewLessonPage() {
     useState("")
 
   useEffect(() => {
-    async function loadCourses() {
+    async function loadPage() {
+      if (!lessonId) {
+        setError(
+          "Ders bilgisi bulunamadı.",
+        )
+
+        setIsLoading(false)
+        return
+      }
+
       try {
         setIsLoading(true)
         setError("")
 
-        const data =
-          await getCourses()
+        const [
+          lessonData,
+          courseData,
+        ] = await Promise.all([
+          getLessonById(lessonId),
+          getCourses(),
+        ])
 
-        setCourses(data)
+        setTitle(
+          lessonData.title,
+        )
 
-        if (data.length > 0) {
-          setCourseId(data[0].id)
-        }
+        setContent(
+          lessonData.content,
+        )
+
+        setCourseId(
+          lessonData.courseId,
+        )
+
+        setCourses(
+          courseData,
+        )
+
+        setExistingCoverImageUrl(
+          lessonData.coverImageUrl,
+        )
+
+        setCoverImageAlt(
+          lessonData.coverImageAlt ?? "",
+        )
       } catch (error) {
         setError(
           error instanceof Error
             ? error.message
-            : "Kurslar yüklenemedi.",
+            : "Ders bilgileri yüklenemedi.",
         )
       } finally {
         setIsLoading(false)
       }
     }
 
-    loadCourses()
-  }, [])
+    loadPage()
+  }, [lessonId])
 
   function handleCoverImageChange(
     event: ChangeEvent<HTMLInputElement>,
@@ -162,6 +204,10 @@ function NewLessonPage() {
   ) {
     event.preventDefault()
 
+    if (!lessonId) {
+      return
+    }
+
     if (!title.trim()) {
       setError(
         "Ders başlığı boş bırakılamaz.",
@@ -187,42 +233,44 @@ function NewLessonPage() {
       setIsSubmitting(true)
       setError("")
 
-      const createdLesson =
-        await createLesson({
-          title: title.trim(),
-          content: content.trim(),
+      await updateLesson(
+        lessonId,
+        {
+          title,
+          content,
           courseId,
-        })
+        },
+      )
 
       if (selectedCoverFile) {
-        try {
-          await uploadLessonCover(
-            createdLesson.id,
-            selectedCoverFile,
-            coverImageAlt,
-          )
-        } catch (imageError) {
-          window.alert(
-            imageError instanceof Error
-              ? `Ders oluşturuldu ancak kapak görseli yüklenemedi: ${imageError.message}`
-              : "Ders oluşturuldu ancak kapak görseli yüklenemedi.",
-          )
-        }
+        await uploadLessonCover(
+          lessonId,
+          selectedCoverFile,
+          coverImageAlt,
+        )
       }
 
       navigate(
-        `/teacher/lessons/${createdLesson.id}`,
+        `/teacher/lessons/${lessonId}`,
       )
     } catch (error) {
       setError(
         error instanceof Error
           ? error.message
-          : "Ders oluşturulamadı.",
+          : "Ders güncellenemedi.",
       )
     } finally {
       setIsSubmitting(false)
     }
   }
+
+  const displayedCoverImage =
+    coverPreview ??
+    (
+      existingCoverImageUrl
+        ? `${API_URL}${existingCoverImageUrl}`
+        : null
+    )
 
   return (
     <div className="dashboard">
@@ -254,10 +302,14 @@ function NewLessonPage() {
 
       <main className="dashboard-main lesson-edit-page">
         <Link
-          to="/teacher/lessons"
+          to={
+            lessonId
+              ? `/teacher/lessons/${lessonId}`
+              : "/teacher/lessons"
+          }
           className="back-link"
         >
-          ← Derslere Dön
+          ← Ders Detayına Dön
         </Link>
 
         <section className="lesson-edit-header">
@@ -267,27 +319,30 @@ function NewLessonPage() {
             </p>
 
             <h1>
-              Yeni Ders Oluştur
+              Dersi Düzenle
             </h1>
 
             <p className="page-description">
-              Ders bilgilerini girin ve
-              isteğe bağlı bir kapak görseli
-              ekleyin.
+              Ders bilgilerini ve
+              kapak görselini
+              güncelleyebilirsiniz.
             </p>
           </div>
         </section>
 
         {isLoading && (
           <p className="page-message">
-            Kurslar yükleniyor...
+            Ders bilgileri
+            yükleniyor...
           </p>
         )}
 
         {!isLoading && (
           <form
             className="lesson-edit-form"
-            onSubmit={handleSubmit}
+            onSubmit={
+              handleSubmit
+            }
           >
             {error && (
               <p className="page-error">
@@ -306,12 +361,15 @@ function NewLessonPage() {
                     id="lesson-title"
                     type="text"
                     value={title}
-                    onChange={(event) =>
+                    onChange={(
+                      event,
+                    ) =>
                       setTitle(
-                        event.target.value,
+                        event.target
+                          .value,
                       )
                     }
-                    placeholder="Örn. Kesirlerde Dört İşlem"
+                    placeholder="Ders başlığını yazın"
                   />
                 </div>
 
@@ -323,9 +381,12 @@ function NewLessonPage() {
                   <select
                     id="lesson-course"
                     value={courseId}
-                    onChange={(event) =>
+                    onChange={(
+                      event,
+                    ) =>
                       setCourseId(
-                        event.target.value,
+                        event.target
+                          .value,
                       )
                     }
                   >
@@ -336,10 +397,16 @@ function NewLessonPage() {
                     {courses.map(
                       (course) => (
                         <option
-                          key={course.id}
-                          value={course.id}
+                          key={
+                            course.id
+                          }
+                          value={
+                            course.id
+                          }
                         >
-                          {course.title}
+                          {
+                            course.title
+                          }
                         </option>
                       ),
                     )}
@@ -372,12 +439,14 @@ function NewLessonPage() {
                 </div>
 
                 <div className="lesson-cover-preview">
-                  {coverPreview ? (
+                  {displayedCoverImage ? (
                     <img
-                      src={coverPreview}
+                      src={
+                        displayedCoverImage
+                      }
                       alt={
                         coverImageAlt ||
-                        "Yeni ders kapak görseli"
+                        "Ders kapak görseli"
                       }
                     />
                   ) : (
@@ -387,8 +456,8 @@ function NewLessonPage() {
                       </span>
 
                       <p>
-                        Dersiniz için bir
-                        kapak görseli seçin
+                        Henüz kapak
+                        görseli yok
                       </p>
                     </div>
                   )}
@@ -399,7 +468,7 @@ function NewLessonPage() {
                     htmlFor="lesson-cover-image"
                     className="cover-upload-button"
                   >
-                    {coverPreview
+                    {displayedCoverImage
                       ? "Görseli Değiştir"
                       : "Görsel Seç"}
                   </label>
@@ -422,7 +491,7 @@ function NewLessonPage() {
                         handleRemoveSelectedImage
                       }
                     >
-                      Görseli Kaldır
+                      Seçimi İptal Et
                     </button>
                   )}
 
@@ -440,19 +509,25 @@ function NewLessonPage() {
                   <input
                     id="cover-alt"
                     type="text"
-                    value={coverImageAlt}
-                    onChange={(event) =>
+                    value={
+                      coverImageAlt
+                    }
+                    onChange={(
+                      event,
+                    ) =>
                       setCoverImageAlt(
-                        event.target.value,
+                        event.target
+                          .value,
                       )
                     }
-                    placeholder="Örn. Kesirleri gösteren matematik görseli"
+                    placeholder="Örn. Kesirleri anlatan ders görseli"
                   />
 
                   <small className="form-help">
-                    Görseli göremeyen
-                    kullanıcılar için kısa
-                    bir açıklama yazın.
+                    Görseli
+                    göremeyen kullanıcılar
+                    için kısa bir açıklama
+                    yazın.
                   </small>
                 </div>
               </aside>
@@ -460,7 +535,11 @@ function NewLessonPage() {
 
             <div className="lesson-edit-actions">
               <Link
-                to="/teacher/lessons"
+                to={
+                  lessonId
+                    ? `/teacher/lessons/${lessonId}`
+                    : "/teacher/lessons"
+                }
                 className="cancel-button"
               >
                 İptal
@@ -469,11 +548,13 @@ function NewLessonPage() {
               <button
                 type="submit"
                 className="primary-button"
-                disabled={isSubmitting}
+                disabled={
+                  isSubmitting
+                }
               >
                 {isSubmitting
-                  ? "Ders Oluşturuluyor..."
-                  : "Dersi Oluştur"}
+                  ? "Kaydediliyor..."
+                  : "Değişiklikleri Kaydet"}
               </button>
             </div>
           </form>
@@ -483,4 +564,4 @@ function NewLessonPage() {
   )
 }
 
-export default NewLessonPage
+export default TeacherLessonEditPage
