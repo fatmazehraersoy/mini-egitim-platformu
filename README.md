@@ -6,6 +6,12 @@ Proje; öğretmenlerin ders içerikleri oluşturabilmesini, öğrencilerini ve s
 
 > Bu proje öğrenme, portföy geliştirme ve gerçek dünya web uygulaması mimarisini deneyimleme amacıyla geliştirilmiştir.
 
+## Live Demo
+
+[Uygulamayı Canlı Görüntüle](https://mini-egitim-platformu.vercel.app/)
+
+> Demo giriş ekranından öğretmen veya öğrenci rolü seçilebilir.
+
 ---
 ## Ekran Görüntüleri
 
